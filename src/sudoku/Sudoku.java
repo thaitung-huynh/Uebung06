@@ -5,91 +5,92 @@ import java.util.List;
 
 public class Sudoku {
 
-    private Field[][] board;
+    private Field[][] board = new Field[9][9];;
 
     public Sudoku() {
-        board = new Field[9][9];
         for (int i = 0; i < 9; i++)
             for (int j = 0; j < 9; j++) board[i][j] = new Field(i, j, this);
     }
 
     public void initialize(int... values) {
-        for (int idx = 0; idx < values.length; ++idx)
-            if (values[idx] != 0) board[idx / 9][idx % 9].setValue(values[idx]);
+        try {
+            for (int idx = 0; idx < values.length; ++idx)
+                if (values[idx] != 0) {
+                    int i = idx / 9;
+                    int j = idx % 9;
+                    Value e = Value.of(values[idx]);
+
+                    if (!board[i][j].getDomain().contains(e))
+                        throw new IllegalArgumentException();
+
+                    board[i][j].setValue(Value.of(values[idx]));
+                }
+        }
+        catch (Exception e) {
+            throw new IllegalArgumentException("Invalid Board");
+        }
     }
 
     public Field getField(int row, int col) {
         return board[row][col];
     }
 
-    public boolean solve() {
-        return findNext();
-    }
-
-    // solve Hilf-Funktion -- private method
-    private boolean findNext() {
-        Field bestOption = null;
-        int currentBestChoice = 10;
-        for (int row = 0; row < 9; row++) {
-            for (int col = 0; col < 9; col++) {
-                Field f = board[row][col];
+    // Hilfsfunktion für solve() und solveAll()
+    private Field findBestChoice() {
+        Field bestChoice = null;
+        int currentBest = 10;
+        for (Field[] row : board)
+            for (Field f : row) {
                 if (f.isEmpty()) {
-                    int choice = f.getDomain().size();
-                    if (choice < currentBestChoice) {
-                        currentBestChoice = choice;
-                        bestOption = f;
+                    // sizeOfDomain ist die Anzahl der Möglichkeiten, eine neue Zahl in board[i][j] zu setzen.
+                    int sizeOfDomain = f.getDomain().size();
+                    if (sizeOfDomain < currentBest) {
+                        currentBest = sizeOfDomain;
+                        bestChoice = f;
                     }
                 }
             }
-        }
-        if (bestOption == null) return true;
 
-        for (Value v: bestOption.getDomain()) {
-            bestOption.setValue(v);
-            if (findNext()) return true;
-            bestOption.setValue(null);
+        return bestChoice;
+    }
+
+    // Hilfsfunktion für solve()
+    private boolean canSolve() {
+        Field bestChoice = findBestChoice();
+        if (bestChoice == null) return true;
+
+        for (Value v: bestChoice.getDomain()) {
+            bestChoice.setValue(v);
+            if (canSolve()) return true;
+            bestChoice.setValue(null);
         }
         return false;
     }
 
+    public boolean solve() {
+        return canSolve();
+    }
 
     public List<Sudoku> solveAll() {
         List<Sudoku> solutions = new ArrayList<>();
-        findSolution(solutions);
+        findAllSolution(solutions);
         return solutions;
     }
 
-    private void findSolution(List<Sudoku> solutions) {
-        Field bestOption = null;
-        int currentBestChoice = 10;
-        for (int row = 0; row < 9; row++) {
-            for (int col = 0; col < 9; col++) {
-                Field f = board[row][col];
-                if (f.isEmpty()) {
-                    int choice = f.getDomain().size();
-                    if (choice < currentBestChoice) {
-                        currentBestChoice = choice;
-                        bestOption = f;
-                    }
-                }
-            }
-        }
-        if (bestOption == null){
-            Sudoku newSol = new Sudoku();
-            for (int row = 0; row < 9; row++) {
-                for (int col = 0; col < 9; col++) {
-                    Field f = board[row][col];
-                    newSol.getField(row, col).setValue(f.getValue());
-                }
-            }
-            solutions.add(newSol);
+    private void findAllSolution(List<Sudoku> solutions) {
+        Field bestChoice = findBestChoice();
+
+        // Keine Stelle mehr
+        if (bestChoice == null){
+            solutions.add(this);
             return;
         }
 
-        for (Value v: bestOption.getDomain()) {
-            bestOption.setValue(v);
-            findSolution(solutions);
-            bestOption.setValue(null);
+        // Versuche alle Möglichkeiten für bestChoice
+        for (Value v: bestChoice.getDomain()) {
+            bestChoice.setValue(v);
+            findAllSolution(solutions);
+            bestChoice.setValue(null);
         }
     }
 
@@ -101,9 +102,9 @@ public class Sudoku {
             if (i == 3 || i == 6) sb.append("---------+---------+---------\n");
             sb.append(" ");
             for (int j = 0; j < 9; j++) {
-                if (j == 2 || j == 5) sb.append(board[i][j] + " | ");
+                if (j == 2 || j == 5) sb.append(board[i][j]).append(" | ");
                 else
-                    sb.append(board[i][j] + "  ");
+                    sb.append(board[i][j]).append("  ");
             }
             sb.append("\n");
         }
@@ -111,3 +112,4 @@ public class Sudoku {
     }
 
 }
+// Tung Huynh
