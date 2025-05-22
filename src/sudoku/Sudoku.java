@@ -5,7 +5,7 @@ import java.util.List;
 
 public class Sudoku {
 
-    private Field[][] board = new Field[9][9];;
+    private final Field[][] board = new Field[9][9];;
 
     public Sudoku() {
         for (int i = 0; i < 9; i++)
@@ -13,22 +13,15 @@ public class Sudoku {
     }
 
     public void initialize(int... values) {
-        try {
-            for (int idx = 0; idx < values.length; ++idx)
-                if (values[idx] != 0) {
-                    int i = idx / 9;
-                    int j = idx % 9;
-                    Value e = Value.of(values[idx]);
-
-                    if (!board[i][j].getDomain().contains(e))
-                        throw new IllegalArgumentException();
-
-                    board[i][j].setValue(Value.of(values[idx]));
-                }
-        }
-        catch (Exception e) {
-            throw new IllegalArgumentException("Invalid Board");
-        }
+        for (int idx = 0; idx < values.length; ++idx)
+            if (values[idx] != 0) {
+                int i = idx / 9;
+                int j = idx % 9;
+                Value e = Value.of(values[idx]);
+                board[i][j].setValue(e);
+                for(Field f: board[i][j].getDependents())
+                    if (f.getDomain().contains(e)) f.getDomain().remove(e);
+            }
     }
 
     public Field getField(int row, int col) {
@@ -38,7 +31,7 @@ public class Sudoku {
     // Hilfsfunktion für solve() und solveAll()
     private Field findBestChoice() {
         Field bestChoice = null;
-        int currentBest = 10;
+        int currentBest = 1000000;
         for (Field[] row : board)
             for (Field f : row) {
                 if (f.isEmpty()) {
@@ -56,13 +49,28 @@ public class Sudoku {
 
     // Hilfsfunktion für solve()
     private boolean canSolve() {
+
         Field bestChoice = findBestChoice();
         if (bestChoice == null) return true;
 
         for (Value v: bestChoice.getDomain()) {
+
+            List<Field> dependents = new ArrayList<>();
+
+            for (Field dependent: bestChoice.getDependents())
+                if (dependent.getDomain().contains(v)) {
+                    dependent.getDomain().remove(v);
+                    dependents.add(dependent);
+                }
+
             bestChoice.setValue(v);
+
             if (canSolve()) return true;
+
+            // Memset
             bestChoice.setValue(null);
+            for (Field dependent: dependents) dependent.getDomain().add(v);
+
         }
         return false;
     }
@@ -71,10 +79,24 @@ public class Sudoku {
         return canSolve();
     }
 
+
+
+
     public List<Sudoku> solveAll() {
         List<Sudoku> solutions = new ArrayList<>();
+
         findAllSolution(solutions);
+
         return solutions;
+    }
+
+    @Override
+    public Sudoku clone() {
+        Sudoku copy = new Sudoku();
+        for (int i = 0; i < 9; ++i)
+            for (int j = 0; j < 9; ++j) copy.board[i][j].setValue(this.board[i][j].getValue());
+
+        return copy;
     }
 
     private void findAllSolution(List<Sudoku> solutions) {
@@ -82,15 +104,33 @@ public class Sudoku {
 
         // Keine Stelle mehr
         if (bestChoice == null){
-            solutions.add(this);
+            int cnt = 0;
+            for (int i = 0; i < 9; ++i)
+                for (int j = 0; j < 9; ++j)
+                    if (board[i][j].isEmpty()) cnt++;
+            //System.out.println("fucking this sudoku");
+            solutions.add(this.clone());
             return;
         }
 
         // Versuche alle Möglichkeiten für bestChoice
         for (Value v: bestChoice.getDomain()) {
+            List<Field> dependents = new ArrayList<>();
+
+            for (Field dependent: bestChoice.getDependents())
+                if (dependent.getDomain().contains(v)) {
+                    dependent.getDomain().remove(v);
+                    dependents.add(dependent);
+                }
+
             bestChoice.setValue(v);
+
             findAllSolution(solutions);
+
+            // Memset
             bestChoice.setValue(null);
+            for (Field dependent: dependents) dependent.getDomain().add(v);
+
         }
     }
 

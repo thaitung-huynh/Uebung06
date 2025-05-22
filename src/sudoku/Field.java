@@ -7,7 +7,7 @@ public class Field {
     private final int y;
     private Value value;
     private final Sudoku sudoku;
-
+    private final Set<Value> domain = EnumSet.allOf(Value.class);
     private List<Field> dependents = null;
 
     public Field(int x, int y, Sudoku sudoku) {
@@ -28,6 +28,7 @@ public class Field {
     public Value getValue() {
         return value;
     }
+
 
     public List<Field> getDependents() {
         if (dependents == null) {
@@ -58,16 +59,12 @@ public class Field {
                 }
             }
         }
+
         return dependents;
     }
 
     public Set<Value> getDomain() {
-        if (!isEmpty()) return Collections.emptySet(); // ohne NullpointerException
-
-        Set<Value> domain = EnumSet.allOf(Value.class);
-        for (Field dep: getDependents())
-            if (!dep.isEmpty()) domain.remove(dep.getValue());
-        return domain;
+        return !isEmpty() ? Collections.emptySet() : domain;
     }
 
     @Override
